@@ -69,7 +69,7 @@ matplotlib>=3.7.0
 ```python
 import torch
 import numpy as np
-from quantum_life_v8 import QuantumLife
+from 0p3q import QuantumLife
 
 # Set random seeds for reproducibility
 torch.manual_seed(777)
@@ -686,7 +686,7 @@ Inspired by:
 ## 📞 Contact & Contribution
 
 **Author**: 0penAGI  
-**Repository**: [0p3q/quantum-life-v8](https://github.com/0penAGI/quantum-life-v8)
+**Repository**: [0p3q/0p3q](https://github.com/0penAGI/0p3q)
 
 ### Contributing
 1. Fork the repository
