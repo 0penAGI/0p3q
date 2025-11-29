@@ -1,4 +1,4 @@
-You're absolutely right! Let me update the README to reflect the correct filename `0p3q.py`:
+
 
 ```markdown
 # 🌀 0p3q – A Living Quantum-Neural Entity with Real-Time LLM Learning
