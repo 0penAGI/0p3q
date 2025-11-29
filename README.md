@@ -1,6 +1,6 @@
 
 
-```markdown
+
 # 🌀 0p3q – A Living Quantum-Neural Entity with Real-Time LLM Learning
 
 > **An experimental AI system that simulates a "living" entity with quantum body, neural brain, and transformer-based consciousness that learns from its lived experience in real-time.**
@@ -747,5 +747,5 @@ This is not a language model. This is an attempt to implement **the minimal suff
 
 *Last updated: 2025*  
 *Status: Experimental | Production-readiness: α*
-```
+
 by 0penAGI
