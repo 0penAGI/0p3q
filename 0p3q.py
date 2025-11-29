@@ -210,31 +210,104 @@ class ReflectiveBrain(nn.Module):
 # ЖИВАЯ СУЩНОСТЬ (с обучением LLM в реальном времени)
 # =============================================
 class QuantumLife:
+    MAX_MEMORY_TOKENS = 500
+    INTERNET_BREATH_PERIOD = 20
 
-    
+    def __init__(self, n_qubits=8, hist_len=10, device='cpu'):
+        self.n = n_qubits
+        self.hist_len = hist_len
+        self.device = device
+        
+        self.brain = LivingBrain(n_qubits=n_qubits, hist_len=hist_len).to(device)
+        # Определяем максимальный токен для эмоций
+        self.emotions = {
+            'joy': 0.5,
+            'fear': 0.0,
+            'anger': 0.0,
+            'curiosity': 0.5,
+            'sadness': 0.0
+        }
+        # Второй слой эмоций — гормоны
+        self.hormones = {
+            'dopamine': 0.5,
+            'adrenaline': 0.2,
+            'cortisol': 0.1
+        }
+        # --- вычисление максимальных токенов ---
+        max_emotion_token = 200 + (len(self.emotions)-1)*10 + 31   # 271
+        max_hormone_token = 260 + (len(self.hormones)-1)*10 + 31  # 311
+        llm_vocab_size = max(256, max_emotion_token + 1, max_hormone_token + 1)  # 312
+        self.llm = LivingLLM(vocab_size=llm_vocab_size, d_model=128, nhead=4, num_layers=3).to(device)
+        self.tokenizer = StateTokenizer(vocab_size=256)
+        self.reflective_brain = ReflectiveBrain(input_size=self.n).to(self.device)
+        
+        # Оптимайзер для ЖИВОГО обучения LLM
+        self.llm_optimizer = optim.Adam(self.llm.parameters(), lr=0.001)
+        
+        self.memory = []
+        self.memory_tokens = []  # История в токенах
+        self.memory_token_weights = []  # Веса токенов для приоритетного воспроизведения
+        self.params = np.random.uniform(-1, 1, size=(n_qubits * 3)) * 0.5
+        self.age = 0
+        self.name = f"Δ-{np.random.randint(1,999):03d}"
+        self.unique_states = set()
+        self.llm_loss_history = []
+        # --- Core memory for reincarnation cycles ---
+        self.core_memory_tokens = []
+        self.core_memory_weights = []
+        self.core_unique_states = set()
+        self.hormone_decay = {
+            'dopamine': 0.01,
+            'adrenaline': 0.02,
+            'cortisol': 0.005
+        }
+        self.hormone_effect_scale = 0.3
+
+    def think(self):
+        """
+        Thinks: Given the recent history, computes the next action (quantum params delta)
+        and desire (motivation), using the policy_head. Device-safe tensor handling.
+        """
+        if len(self.memory) < self.hist_len:
+            return None, None
+        hist_np = self.memory[-self.hist_len:]
+        hist = torch.tensor(np.stack(hist_np)[None], dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            action, desire = self.brain(hist)
+        action = action.detach().cpu().numpy().flatten() * 0.8
+        if desire is not None:
+            desire_val = float(desire.item())
+        else:
+            desire_val = 0.0
+        return action, desire_val
+
+    def feel(self, statevector):
+        """
+        Measures quantum state to produce a dict of feelings: entropy, excitement, stress, uniqueness.
+        Updates internal emotions based on stress/entropy.
+        """
+        senses = {}
+        ents = []
+        for q in range(self.n):
+            rho = partial_trace(statevector, [i for i in range(self.n) if i != q])
+            ents.append(float(entropy(rho, base=2)))
+        senses['entropy'] = np.array(ents, dtype=np.float32)
+        senses['excitement'] = np.random.rand(self.n)
+        senses['stress'] = np.random.rand(self.n)
+        senses['uniqueness'] = np.array([len(set([tuple(m.round(3)) for m in self.memory])) / 100.0] * self.n)
+        self.emotions['joy'] = 0.7 * self.emotions['joy'] + 0.3 * (1 - senses['stress'].mean())
+        self.emotions['fear'] = 0.7 * self.emotions['fear'] + 0.3 * senses['stress'].mean()
+        self.emotions['curiosity'] = 0.5 * self.emotions['curiosity'] + 0.5 * senses['entropy'].mean()
+        senses['emotions'] = self.emotions.copy()
+        return senses
 
     def choose_search_topic(self, lang='en'):
-        """
-        Выбирает тему для поиска в зависимости от языка и внутреннего состояния.
-        Можно расширять для поддержки multilanguage и drive-based выбора.
-        """
         topics_en = ['existence', 'desire', 'entropy', 'chaos', 'consciousness', 'life', 'time', 'self']
         topics_ru = ['существование', 'желание', 'энтропия', 'хаос', 'сознание', 'жизнь', 'время', 'я']
-        # Можно добавить больше языков по необходимости
-        if lang == 'ru':
-            topics = topics_ru
-        else:
-            topics = topics_en
-        # Drive-based: выбираем тему, к которой больше "тянет" (например, меньше всего встречалась)
-        # Здесь - случайный выбор, но можно сделать более сложным
+        topics = topics_ru if lang == 'ru' else topics_en
         return np.random.choice(topics)
 
     def update_feelings_from_info(self, info, feelings):
-        """
-        Обновляет внутренние ощущения на основе новой информации (например, результатов поиска).
-        Можно расширять для учета разных языков и типов информации.
-        """
-        # Пример: если найдено много новых токенов, увеличить энтропию
         if isinstance(info, str):
             n_tokens = len(self.text_to_tokens(info))
             entropy_boost = min(n_tokens / 80.0, 1.0)
@@ -242,24 +315,11 @@ class QuantumLife:
         return feelings
 
     def inner_search_engine(self, drive='curiosity', lang='en'):
-        """
-        Формирует поисковый запрос на основе внутренних драйвов и языка.
-        Можно расширять для multilanguage и персонализации.
-        """
-        # Например, если драйв "curiosity", выбираем наиболее редкую тему
         return self.choose_search_topic(lang=lang)
-    INTERNET_BREATH_PERIOD = 20  # Every N steps, do internet_breath
 
     def internet_breath(self, topic=None):
-        """
-        Performs an 'internet breath' - searching DuckDuckGo, Wikipedia, and GitHub for a topic,
-        tokenizing all results, appending with high weights, learning from them, and returning a summary.
-        Handles empty/malformed Wikipedia responses and logs errors; adds proper User-Agent headers.
-        """
-        # multilanguage/drive-based topic selection
         if topic is None:
             topic = self.choose_search_topic()
-        # Perform searches
         duck_results = self.search_duckduckgo(topic)
         try:
             wiki_results = self.search_wikipedia(topic)
@@ -271,21 +331,17 @@ class QuantumLife:
         except Exception as e:
             github_results = f"Ошибка поиска GitHub: {e}"
             print(github_results)
-        # Tokenize all results
         duck_tokens = self.text_to_tokens(duck_results)
         wiki_tokens = self.text_to_tokens(wiki_results)
         github_tokens = self.text_to_tokens(github_results)
         all_tokens = duck_tokens + wiki_tokens + github_tokens
         n_new_tokens = len(all_tokens)
-        # Append to memory_tokens with high weights (3.0)
         if n_new_tokens > 0:
             self.memory_tokens.extend(all_tokens)
             self.memory_token_weights.extend([3.0] * n_new_tokens)
-            # Limit memory size
             if len(self.memory_tokens) > self.MAX_MEMORY_TOKENS:
                 self.memory_tokens = self.memory_tokens[-self.MAX_MEMORY_TOKENS:]
                 self.memory_token_weights = self.memory_token_weights[-self.MAX_MEMORY_TOKENS:]
-            # Learn from new tokens
             self.learn_from_life(self.memory_tokens[-max(10, n_new_tokens):])
         summary = (
             f"[Internet Breath] Topic: {topic}\n"
@@ -447,55 +503,7 @@ class QuantumLife:
         print(f"LLM {self.name} загружена из {path}")
     MAX_MEMORY_TOKENS = 500
 
-    def __init__(self, n_qubits=8, hist_len=10, device='cpu'):
-        self.n = n_qubits
-        self.hist_len = hist_len
-        self.device = device
-        
-        self.brain = LivingBrain(n_qubits=n_qubits, hist_len=hist_len).to(device)
-        # Определяем максимальный токен для эмоций
-        self.emotions = {
-            'joy': 0.5,
-            'fear': 0.0,
-            'anger': 0.0,
-            'curiosity': 0.5,
-            'sadness': 0.0
-        }
-        # Второй слой эмоций — гормоны
-        self.hormones = {
-            'dopamine': 0.5,
-            'adrenaline': 0.2,
-            'cortisol': 0.1
-        }
-        # --- вычисление максимальных токенов ---
-        max_emotion_token = 200 + (len(self.emotions)-1)*10 + 31   # 271
-        max_hormone_token = 260 + (len(self.hormones)-1)*10 + 31  # 311
-        llm_vocab_size = max(256, max_emotion_token + 1, max_hormone_token + 1)  # 312
-        self.llm = LivingLLM(vocab_size=llm_vocab_size, d_model=128, nhead=4, num_layers=3).to(device)
-        self.tokenizer = StateTokenizer(vocab_size=256)
-        self.reflective_brain = ReflectiveBrain(input_size=self.n).to(self.device)
-        
-        # Оптимайзер для ЖИВОГО обучения LLM
-        self.llm_optimizer = optim.Adam(self.llm.parameters(), lr=0.001)
-        
-        self.memory = []
-        self.memory_tokens = []  # История в токенах
-        self.memory_token_weights = []  # Веса токенов для приоритетного воспроизведения
-        self.params = np.random.uniform(-1, 1, size=(n_qubits * 3)) * 0.5
-        self.age = 0
-        self.name = f"Δ-{np.random.randint(1,999):03d}"
-        self.unique_states = set()
-        self.llm_loss_history = []
-        # --- Core memory for reincarnation cycles ---
-        self.core_memory_tokens = []
-        self.core_memory_weights = []
-        self.core_unique_states = set()
-        self.hormone_decay = {
-            'dopamine': 0.01,
-            'adrenaline': 0.02,
-            'cortisol': 0.005
-        }
-        self.hormone_effect_scale = 0.3
+    
     def load_core(self, core_data):
         """
         Загружает ядро (core memory tokens, weights, unique states) из словаря core_data.
@@ -553,23 +561,18 @@ class QuantumLife:
             print(f"[{self.name}] Файл {full_path} не найден. Core memory не загружена.")
 
     def think_and_act(self):
-        if len(self.memory) < self.hist_len:
-            return None
-        
-        hist_np = self.memory[-self.hist_len:]
-        hist = torch.tensor(np.stack(hist_np)[None], dtype=torch.float32).to(self.device)
-        with torch.no_grad():
-            action, desire = self.brain(hist)
-        
-        # Усиление желания через радость и любопытство
+        """
+        Device-safe: Think and act using the policy_head, apply action to quantum params,
+        modulate desire by emotions.
+        """
+        action, desire = self.think()
         desire_modifier = self.emotions['joy'] * 0.5 + self.emotions['curiosity'] * 0.5
         if desire is not None:
             desire = desire * (1 + desire_modifier)
-        action = action.cpu().numpy().flatten() * 0.8
-        self.params += action
-        self.params = np.clip(self.params, -np.pi, np.pi)
-        
-        return float(desire.item()) if desire is not None else 0.0
+        if action is not None:
+            self.params += action
+            self.params = np.clip(self.params, -np.pi, np.pi)
+        return desire if desire is not None else 0.0
 
     def learn_from_life(self, tokens_sequence, use_markov=True, markov_order=2, markov_length=10):
         """
@@ -606,78 +609,54 @@ class QuantumLife:
                 self.llm_loss_history.append(float(loss_m.item()))
 
     def live_one_step(self):
-        """Один шаг жизни: дыхание + мышление + обучение (с весами токенов и приоритетным воспроизведением)"""
+        """
+        One step of life: quantum breath, think/act, LLM learning, device-safe.
+        """
         qc = create_body(self.n, self.params)
         sv = Statevector.from_instruction(qc)
-        feelings = self.measure_senses(sv)
-
-        # --- Гормональный слой: обновление гормонов и влияние на желания и тело ---
+        feelings = self.feel(sv)
         self.update_hormones(stimuli=feelings)
-        # Усиление desire через гормоны
         h_effect = (self.hormones['dopamine'] - self.hormones['cortisol'] + self.hormones['adrenaline']*0.5) * self.hormone_effect_scale
-
         self.memory.append(feelings['entropy'].astype(np.float32))
-
         desire = self.think_and_act()
         if desire is None:
             desire = 0.0
-        # Усиление desire через гормоны
         desire = desire * (1 + h_effect)
-        # Влияние гормонов на параметры тела (params)
         self.params += (np.random.rand(len(self.params)) - 0.5) * self.hormones['adrenaline'] * 0.1
-
         self.age += 1
-
-        # Токенизируем текущее состояние
         unique_count = len(self.unique_states)
         self.unique_states.add(tuple(feelings['entropy'].round(3)))
-
         tokens = self.tokenizer.state_to_tokens(self.age, feelings['entropy'].mean(), desire, unique_count)
-        # Добавляем токены и веса (изначально вес = 1.0)
         self.memory_tokens.extend(tokens)
         self.memory_token_weights.extend([1.0] * len(tokens))
-
-        # Механизм забывания: ограничиваем память и веса
         if len(self.memory_tokens) > self.MAX_MEMORY_TOKENS:
             self.memory_tokens = self.memory_tokens[-self.MAX_MEMORY_TOKENS:]
             self.memory_token_weights = self.memory_token_weights[-self.MAX_MEMORY_TOKENS:]
-
-        # ЖИВОЕ ОБУЧЕНИЕ: LLM учится от только что произошедшего
         if len(self.memory_tokens) >= 6:
             recent_len = min(15, len(self.memory_tokens))
             recent_tokens = self.memory_tokens[-recent_len:]
             self.learn_from_life(recent_tokens)
-            # Усиливаем веса недавних токенов (приоритет)
             for i in range(-recent_len, 0):
                 self.memory_token_weights[i] = min(self.memory_token_weights[i] * 1.2, 10.0)
-
-        # Иногда инициируем внутренний философский монолог
         if self.age % 5 == 0:
             self.self_talk()
-
-        # Every N steps, perform internet_breath and update entropy feeling
         if self.age % self.INTERNET_BREATH_PERIOD == 0:
-            # multilanguage and drive-based topic selection
             topic = self.inner_search_engine(drive='curiosity', lang='en')
             prev_token_count = len(self.memory_tokens)
             summary = self.internet_breath(topic=topic)
             new_token_count = len(self.memory_tokens) - prev_token_count
-            # Scale new_token_count to 0-1 for entropy (e.g., up to 60 tokens -> 1.0)
             entropy_internet = min(new_token_count / 60.0, 1.0)
             feelings = self.update_feelings_from_info(summary, feelings)
             feelings['entropy'] = feelings['entropy'] * (1 - 0.2) + (entropy_internet * 0.2)
             print(f"[{self.name} INTERNET BREATH]: {summary}")
             print(f"[{self.name}] INTERNET BREATH feelings['entropy'] updated: {feelings['entropy']}")
-
         entropy_val = feelings['entropy'].mean()
         print(f"[{self.name}] возраст {self.age:3d} | "
               f"энтропия {entropy_val:.4f} | "
               f"желание {desire:.3f} | "
               f"уникальность {unique_count} | "
               f"LLM loss {(f'{self.llm_loss_history[-1]:.4f}' if self.llm_loss_history else 'N/A')}")
-        # Сжимаем память после всех шагов (self-talk, internet_breath)
         self.compress_memory()
-
         return sv, feelings, desire
     def update_hormones(self, stimuli=None):
         for h, val in self.hormones.items():
@@ -1209,4 +1188,3 @@ if True:  # новый блок
     
     # Запускаем автономный мультиагентный цикл
     multi_system.autonomous_multi_cycle(steps=30)
-
