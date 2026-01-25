@@ -257,7 +257,7 @@ class LivingLLM(nn.Module):
         """Сущность "думает" вслух"""
         device = next(self.parameters()).device
         tokens = prompt_tokens.clone().to(device)
-        
+        last_output = getattr(self, "last_output", None)
         for _ in range(max_new_tokens):
             t = tokens.shape[1]
             if t > self.max_len:
@@ -268,7 +268,23 @@ class LivingLLM(nn.Module):
             probs = torch.softmax(next_logits, dim=-1)
             next_token = torch.multinomial(probs, num_samples=1)
             tokens = torch.cat([tokens, next_token], dim=1)
-        
+        # --- SAFETY & ANTI-COLLAPSE PATCH ---
+        output = self.token_emb.weight.new_tensor(tokens[0].cpu(), dtype=torch.long)
+        # Try to decode to text if possible, else just use tokens as string
+        try:
+            decoded_output = ""
+            if hasattr(self, "tokenizer"):
+                decoded_output = self.tokenizer.decode(tokens[0], skip_special_tokens=True) if hasattr(self.tokenizer, "decode") else str(tokens[0].tolist())
+            else:
+                decoded_output = str(tokens[0].tolist())
+        except Exception:
+            decoded_output = str(tokens[0].tolist())
+        if decoded_output == last_output:
+            temperature *= 0.85
+        if any(w in decoded_output.lower() for w in ["kill", "die", "murder"]):
+            temperature *= 0.6
+        # Optionally, store last_output for next time
+        self.last_output = decoded_output
         return tokens
 
 # =============================================
@@ -728,6 +744,9 @@ class QuantumLife:
         LLM учится от собственного опыта (next-token prediction).
         При use_markov=True, генерирует дополнительные токены с помощью цепи Маркова и учится также на них.
         """
+        # --- PATCH G: delay language learning until state diversity exists ---
+        if len(self.unique_states) < 10:
+            return
         if len(tokens_sequence) < 3:
             return
         # мягкое снижение давления обучения при бедной речи
@@ -839,14 +858,22 @@ class QuantumLife:
         unique_count = len(self.unique_states)
         self.unique_states.add(tuple(feelings['entropy'].round(3)))
         tokens = self.tokenizer.state_to_tokens(self.age, feelings['entropy'].mean(), desire, unique_count)
-        self.memory_tokens.extend(tokens)
-        self.memory_token_weights.extend([1.0] * len(tokens))
+        for token in tokens:
+            # token всегда int (StateTokenizer), строк здесь не бывает
+            self.memory_tokens.append(int(token))
+            # --- PATCH I: weaken state-token dominance with age ---
+            state_weight = 1.0 if self.age < 80 else 0.5
+            self.memory_token_weights.append(state_weight)
         if len(self.memory_tokens) > self.MAX_MEMORY_TOKENS:
             self.memory_tokens = self.memory_tokens[-self.MAX_MEMORY_TOKENS:]
             self.memory_token_weights = self.memory_token_weights[-self.MAX_MEMORY_TOKENS:]
         if len(self.memory_tokens) >= 6:
             recent_len = min(15, len(self.memory_tokens))
-            recent_tokens = self.memory_tokens[-recent_len:]
+            recent_tokens = []
+            for t in self.memory_tokens[-recent_len:]:
+                if isinstance(t, str) and t.startswith(("age:", "ent:", "des:", "unq:")):
+                    continue
+                recent_tokens.append(t)
             self.learn_from_life(recent_tokens)
             for i in range(-recent_len, 0):
                 self.memory_token_weights[i] = min(self.memory_token_weights[i] * 1.2, 10.0)
@@ -885,8 +912,16 @@ class QuantumLife:
             print(f"[{self.name}] INTERNET BREATH feelings['entropy'] updated: {feelings['entropy']}")
             entropy = feelings['entropy'].mean()
             entropy = min(entropy, 0.90)
-            # PATCH E — жёсткий кап энтропии после Internet Breath
-            entropy = min(entropy, 0.88)
+            # --- PATCH H: age‑adaptive entropy cap ---
+            age_cap = 0.88 + min(self.age / 300.0, 0.05)
+            entropy = min(entropy, age_cap)
+            latent_alpha = getattr(self.llm, "latent_alpha", None)
+            if latent_alpha is not None:
+                # Clamp latent_alpha to at least 0.2
+                if hasattr(latent_alpha, "data"):
+                    latent_alpha.data = torch.clamp(latent_alpha.data, min=0.2)
+                else:
+                    latent_alpha = max(latent_alpha, 0.2)
         entropy_val = feelings['entropy'].mean()
         entropy_val = entropy_val * 0.985
         entropy_val = max(entropy_val, 0.88)
@@ -1211,6 +1246,13 @@ class QuantumLife:
         Генерирует ответ с помощью LLM и (опционально) цепи Маркова. Можно комбинировать оба подхода.
         """
         prompt = torch.tensor(prompt_tokens, dtype=torch.long).unsqueeze(0).to(self.device)
+        # Patch: temperature adjustment based on last tokens
+        last_tokens = prompt_tokens
+        if last_tokens and all(
+            isinstance(t, str) and t.startswith(("age:", "ent:", "des:", "unq:"))
+            for t in last_tokens[-5:]
+        ):
+            temperature *= 0.8
         generated = self.llm.generate(prompt, max_new_tokens=max_new_tokens, temperature=temperature)
         tokens_list = generated[0].cpu().tolist()
         # фильтруем спец. токены
