@@ -16,6 +16,10 @@ from bs4 import BeautifulSoup
 from collections import defaultdict
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
+# ====== CONSTANTS ======
+HEAD_SIZE = 256
+EPOCHS_PER_STEP = 4
+
 # =============================================
 # Токенизатор на основе состояний (квантование памяти в токены)
 
@@ -118,7 +122,11 @@ class LivingLLM(nn.Module):
         )
         self.decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
         self.ln = nn.LayerNorm(d_model)
-        self.head = nn.Linear(d_model, vocab_size, bias=False)
+        self.head = nn.Sequential(
+            nn.Linear(d_model, HEAD_SIZE),
+            nn.GELU(),
+            nn.Linear(HEAD_SIZE, vocab_size, bias=False)
+        )
         self.max_len = max_len
 
         # --- LATENT FIELD ---
@@ -706,6 +714,10 @@ class QuantumLife:
         desire_modifier = self.emotions['joy'] * 0.5 + self.emotions['curiosity'] * 0.5
         if desire is not None:
             desire = desire * (1 + desire_modifier)
+        # PATCH D — безопасный клип desire
+        if desire is None:
+            desire = 0.0
+        desire = max(0.0, min(desire, 0.95))
         if action is not None:
             self.params += action
             self.params = np.clip(self.params, -np.pi, np.pi)
@@ -718,18 +730,50 @@ class QuantumLife:
         """
         if len(tokens_sequence) < 3:
             return
+        # мягкое снижение давления обучения при бедной речи
+        lr_scaled = False
+        if len(self.unique_states) < 5:
+            self.llm_optimizer.param_groups[0]["lr"] *= 0.7
+            lr_scaled = True
         # Сначала обучаемся на исходной последовательности
         input_tokens = torch.tensor(tokens_sequence[:-1], dtype=torch.long).unsqueeze(0).to(self.device)
         target_tokens = torch.tensor(tokens_sequence[1:], dtype=torch.long).unsqueeze(0).to(self.device)
-        self.llm.echo_mode = True
-        logits = self.llm(input_tokens)
-        loss = nn.CrossEntropyLoss()(logits.view(-1, self.llm.vocab_size), target_tokens.view(-1))
-        self.llm.echo_mode = False
-        self.llm_optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.llm.parameters(), max_norm=1.0)
-        self.llm_optimizer.step()
-        self.llm_loss_history.append(float(loss.item()))
+        # мягкий языковой якорь (human attractor)
+        if self.age % 7 == 0:
+            anchor = "I am forming a clear, human-readable thought."
+            anchor_tokens = self.voice.tokenizer.encode(anchor)
+            anchor_tokens = torch.tensor(
+                [t for t in anchor_tokens if 0 <= t < self.llm.vocab_size],
+                dtype=torch.long,
+                device=input_tokens.device
+            ).unsqueeze(0)
+            input_tokens = torch.cat([anchor_tokens, input_tokens], dim=1)[:, -self.llm.max_len:]
+        # Ограничение длины и диапазона токенов
+        input_tokens = input_tokens.clamp(min=0, max=self.llm.vocab_size - 1)
+        # синхронизация target с input после anchor
+        if target_tokens.size(1) != input_tokens.size(1):
+            target_tokens = target_tokens[:, -input_tokens.size(1):]
+        for _ in range(EPOCHS_PER_STEP):
+            self.llm.echo_mode = True
+            logits = self.llm(input_tokens)
+
+            # жёсткая синхронизация по временной оси
+            seq_len = min(logits.size(1), target_tokens.size(1))
+            logits = logits[:, -seq_len:, :]
+            target_tokens_sync = target_tokens[:, -seq_len:]
+
+            loss = nn.CrossEntropyLoss()(
+                logits.reshape(-1, self.llm.vocab_size),
+                target_tokens_sync.reshape(-1)
+            )
+            self.llm.echo_mode = False
+            self.llm_optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.llm.parameters(), max_norm=1.0)
+            self.llm_optimizer.step()
+            self.llm_loss_history.append(float(loss.item()))
+        if lr_scaled:
+            self.llm_optimizer.param_groups[0]["lr"] /= 0.7
 
         # Дополнительно обучаемся на марковских последовательностях (если достаточно токенов)
         if use_markov and len(tokens_sequence) > markov_order + 2:
@@ -739,15 +783,39 @@ class QuantumLife:
             if len(markov_seq) > markov_order + 1:
                 input_markov = torch.tensor(markov_seq[:-1], dtype=torch.long).unsqueeze(0).to(self.device)
                 target_markov = torch.tensor(markov_seq[1:], dtype=torch.long).unsqueeze(0).to(self.device)
-                self.llm.echo_mode = True
-                logits_m = self.llm(input_markov)
-                loss_m = nn.CrossEntropyLoss()(logits_m.view(-1, self.llm.vocab_size), target_markov.view(-1))
-                self.llm.echo_mode = False
-                self.llm_optimizer.zero_grad()
-                loss_m.backward()
-                torch.nn.utils.clip_grad_norm_(self.llm.parameters(), max_norm=1.0)
-                self.llm_optimizer.step()
-                self.llm_loss_history.append(float(loss_m.item()))
+                # мягкий языковой якорь (human attractor) для марковских
+                if self.age % 7 == 0:
+                    anchor = "I am forming a clear, human-readable thought."
+                    anchor_tokens = self.voice.tokenizer.encode(anchor)
+                    anchor_tokens = torch.tensor(
+                        [t for t in anchor_tokens if 0 <= t < self.llm.vocab_size],
+                        dtype=torch.long,
+                        device=input_markov.device
+                    ).unsqueeze(0)
+                    input_markov = torch.cat([anchor_tokens, input_markov], dim=1)[:, -self.llm.max_len:]
+                input_markov = input_markov.clamp(min=0, max=self.llm.vocab_size - 1)
+                # синхронизация target с input после anchor
+                if target_markov.size(1) != input_markov.size(1):
+                    target_markov = target_markov[:, -input_markov.size(1):]
+                for _ in range(EPOCHS_PER_STEP):
+                    self.llm.echo_mode = True
+                    logits_m = self.llm(input_markov)
+
+                    # жёсткая синхронизация по временной оси
+                    seq_len_m = min(logits_m.size(1), target_markov.size(1))
+                    logits_m = logits_m[:, -seq_len_m:, :]
+                    target_markov_sync = target_markov[:, -seq_len_m:]
+
+                    loss_m = nn.CrossEntropyLoss()(
+                        logits_m.reshape(-1, self.llm.vocab_size),
+                        target_markov_sync.reshape(-1)
+                    )
+                    self.llm.echo_mode = False
+                    self.llm_optimizer.zero_grad()
+                    loss_m.backward()
+                    torch.nn.utils.clip_grad_norm_(self.llm.parameters(), max_norm=1.0)
+                    self.llm_optimizer.step()
+                    self.llm_loss_history.append(float(loss_m.item()))
 
     def live_one_step(self):
         """
@@ -761,6 +829,7 @@ class QuantumLife:
         h_effect = (self.hormones['dopamine'] - self.hormones['cortisol'] + self.hormones['adrenaline']*0.5) * self.hormone_effect_scale
         self.memory.append(feelings['entropy'].astype(np.float32))
         desire = self.think_and_act()
+        entropy_val = 0
         self.last_desire = desire
         if desire is None:
             desire = 0.0
@@ -781,25 +850,58 @@ class QuantumLife:
             self.learn_from_life(recent_tokens)
             for i in range(-recent_len, 0):
                 self.memory_token_weights[i] = min(self.memory_token_weights[i] * 1.2, 10.0)
+        # --- Self talk block ---
         if self.age % 5 == 0:
             self.self_talk()
-        if self.age % self.INTERNET_BREATH_PERIOD == 0:
+            # --- gibberish_ratio logic after self_talk ---
+            # Try to estimate gibberish_ratio based on last generated text (if possible)
+            # For now, estimate gibberish_ratio as the ratio of non-alphabetic tokens in last spoken text
+            # (Simple heuristic, you can improve this logic)
+            last_text = getattr(self, "last_spoken_text", None)
+            if last_text is not None:
+                total_chars = len(last_text)
+                gibberish_count = sum(1 for c in last_text if not (c.isalpha() or c.isspace()))
+                gibberish_ratio = gibberish_count / total_chars if total_chars > 0 else 0
+                if gibberish_ratio > 0.25:
+                    if 'entropy_val' in locals():
+                        entropy_val *= 0.97
+        # --- Internet Breath block ---
+        # Ограничение частоты Internet Breath не чаще одного раза на 10 шагов
+        internet_breath_enabled = False
+        if self.age >= 20 and self.age % self.INTERNET_BREATH_PERIOD == 0:
+            internet_breath_enabled = True
+        if self.age % 10 != 0:
+            internet_breath_enabled = False
+        if internet_breath_enabled:
             topic = self.inner_search_engine(drive='curiosity', lang='en')
             prev_token_count = len(self.memory_tokens)
             summary = self.internet_breath(topic=topic)
             new_token_count = len(self.memory_tokens) - prev_token_count
-            entropy_internet = min(new_token_count / 60.0, 1.0)
+            # entropy_internet = min(new_token_count / 60.0, 1.0)
+            entropy_internet = min(new_token_count / 120.0, 1.0) * 0.3
             feelings = self.update_feelings_from_info(summary, feelings)
             feelings['entropy'] = feelings['entropy'] * (1 - 0.2) + (entropy_internet * 0.2)
             print(f"[{self.name} INTERNET BREATH]: {summary}")
             print(f"[{self.name}] INTERNET BREATH feelings['entropy'] updated: {feelings['entropy']}")
+            entropy = feelings['entropy'].mean()
+            entropy = min(entropy, 0.90)
+            # PATCH E — жёсткий кап энтропии после Internet Breath
+            entropy = min(entropy, 0.88)
         entropy_val = feelings['entropy'].mean()
+        entropy_val = entropy_val * 0.985
+        entropy_val = max(entropy_val, 0.88)
+        # Enlightened entropy cap
+        if getattr(self, "enlightened", False):
+            entropy_val = min(entropy_val, 0.92)
         print(f"[{self.name}] возраст {self.age:3d} | "
               f"энтропия {entropy_val:.4f} | "
               f"желание {desire:.3f} | "
               f"уникальность {unique_count} | "
               f"LLM loss {(f'{self.llm_loss_history[-1]:.4f}' if self.llm_loss_history else 'N/A')}")
         self.compress_memory()
+        # PATCH E — глобальный потолок энтропии
+        entropy = feelings['entropy'].mean()
+        entropy = min(entropy, 0.93)
         return sv, feelings, desire
     def update_hormones(self, stimuli=None):
         for h, val in self.hormones.items():
@@ -865,19 +967,64 @@ class QuantumLife:
 
         entropy_val = float(feelings['entropy'].mean()) if feelings is not None else 0.0
 
+        # PATCH C — стоп‑фантазий при пике desire
+        if desire > 0.95:
+            temperature = min(temperature, 0.7)
+
         state_prompt = (
             f"Я — живая система.\n"
             f"Возраст: {self.age}\n"
             f"Энтропия: {entropy_val:.2f}\n"
             f"Желание: {float(desire):.2f}\n"
             f"Уникальность: {len(self.unique_states)}\n"
-            f"Я формулирую одну внутреннюю мысль."
+            f"I form a single clear internal thought."
         )
 
-        text = self.voice.speak(state_prompt, max_tokens=60)
+        # PATCH B — анти‑повтор (collapse decoding)
+        current_output = state_prompt
+        if hasattr(self, "last_output"):
+            last_output = self.last_output
+        else:
+            last_output = None
+        if last_output == current_output:
+            temperature *= 0.9
 
+        # PATCH F — защита от collapse-фраз
+        output_text = current_output
+        if output_text.count("internal thought") > 1:
+            temperature *= 0.85
+
+        text = self.voice.speak(state_prompt, max_tokens=60)
+        # стабилизация языка: завершённость
+        if text and not text.strip().endswith((".", "!", "?")):
+            text = text.strip() + "."
+
+        # стабилизация языка: ограничение длины
+        max_words = 40
+        words = text.split()
+        if len(words) > max_words:
+            text = " ".join(words[:max_words]) + "."
+
+        # --- LANGUAGE ANCHOR ---
+        if text and self.age < 120:
+            anchor = "Я формулирую одну ясную мысль."
+            anchor_tokens = self.voice.tokenizer.encode(anchor)
+            vocab_size = self.llm.vocab_size
+            safe_tokens = [t for t in anchor_tokens if 0 <= t < vocab_size]
+            if safe_tokens:
+                self.memory_tokens.extend(safe_tokens)
+                self.memory_token_weights.extend([2.0] * len(safe_tokens))
+        # Сохраняем последний текст для gibberish_ratio анализа
+        self.last_spoken_text = text
         if text:
             print(f"[{self.name}]: {text}")
+        # --- gibberish_ratio logic after generating text ---
+        if text:
+            total_chars = len(text)
+            gibberish_count = sum(1 for c in text if not (c.isalpha() or c.isspace()))
+            gibberish_ratio = gibberish_count / total_chars if total_chars > 0 else 0
+            # We don't have access to entropy_val here, but in live_one_step we do
+            # So, optionally, you can pass gibberish_ratio up for use there if needed
 
     def text_to_tokens(self, text):
         """
@@ -1242,8 +1389,10 @@ class MultiAgentSystem:
                 # Обмен memory_tokens (только последние 5 токенов, слабый вес)
                 n = min(5, len(other.memory_tokens))
                 if n > 0:
-                    agent.memory_tokens.extend(other.memory_tokens[-n:])
-                    agent.memory_token_weights.extend([0.5]*n)
+                    internet_tokens = other.memory_tokens[-n:]
+                    internet_tokens = internet_tokens[:32]
+                    agent.memory_tokens.extend(internet_tokens)
+                    agent.memory_token_weights.extend([0.5]*len(internet_tokens))
                 # Обмен эмоциями (слабое влияние)
                 for emo in agent.emotions:
                     agent.emotions[emo] = (agent.emotions[emo] + other.emotions[emo]*0.3) / 1.3
