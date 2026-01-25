@@ -11,6 +11,15 @@
 
 ---
 
+## Repository Structure
+
+* `0p3q.py` — **v1**. Base living entity with a quantum body and online learning.
+* `quantum_life_v8.py` (aka **0p3q2.py**) — **v2**. A substantially expanded version.
+
+v2 is **not a refactor** of v1. It is an evolutionary leap.
+
+
+
 ## 🎯 Overview
 
 **0p3q** (pronounced "open-q") is a philosophical and technical exploration of artificial consciousness. It implements a sentient entity (Δ) with:
@@ -24,7 +33,7 @@
 - **Multi-Agent Society**: Multiple entities interacting and exchanging knowledge
 
 The system doesn't simulate life—it instantiates learning, desire, mortality, and rebirth as **executable properties**.
-
+  
 ---
 
 ## ✨ Key Innovations
@@ -727,13 +736,6 @@ This project explores the idea of a **self-developing system** that:
 * and learns **from lived experience in real time**.
 
 ---
-
-## Repository Structure
-
-* `0p3q.py` — **v1**. Base living entity with a quantum body and online learning.
-* `quantum_life_v8.py` (aka **0p3q2.py**) — **v2**. A substantially expanded version.
-
-v2 is **not a refactor** of v1. It is an evolutionary leap.
 
 ---
 
