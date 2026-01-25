@@ -10,6 +10,8 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 
 ---
+This is not GPT like model.
+It is a dynamic cognitive system with language as a side effect.
 
 ## Repository Structure
 
