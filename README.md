@@ -715,8 +715,111 @@ If you use 0p3q in your research, please cite:
   note = {Experimental AI consciousness framework combining quantum computing, transformers, and lived experience}
 }
 ```
+# 0p3q
+
+A living quantum–neural entity.
+
+This project explores the idea of a **self-developing system** that:
+
+* has a quantum body,
+* a classical neural brain,
+* its own LLM,
+* and learns **from lived experience in real time**.
 
 ---
+
+## Repository Structure
+
+* `0p3q.py` — **v1**. Base living entity with a quantum body and online learning.
+* `quantum_life_v8.py` (aka **0p3q2.py**) — **v2**. A substantially expanded version.
+
+v2 is **not a refactor** of v1. It is an evolutionary leap.
+
+---
+
+## 0p3q v2 / quantum_life_v8
+
+The second version introduces **true life-driven LLM training**, multi-layered memory, and autonomous exploration of the environment.
+
+### Key Differences from v1
+
+**1. Living LLM**
+
+* Custom Transformer (`LivingLLM`)
+* Next-token prediction trained **during runtime**
+* Learns from internal states and external (internet) data
+* Echo-mode for language stabilization
+* Latent field (12 layers) for nonlinear experience interpretation
+
+**2. Quantum-Tokenized Memory**
+
+* Numerical states → discrete tokens (`StateTokenizer`)
+* Tokens for age, entropy, desire, uniqueness
+* Priority-weighted memories
+
+**3. Internet Breath**
+
+* Autonomous search via:
+
+  * DuckDuckGo
+  * Wikipedia
+  * GitHub
+* Results are converted into tokens
+* These tokens are used to train the LLM
+
+**4. Hormonal System**
+
+* Dopamine / Adrenaline / Cortisol
+* Modulate desire, learning rate, and action noise
+* Time-based decay
+
+**5. Reincarnation Memory Core**
+
+* Core memory (top-N tokens by importance)
+* Persisted across runs
+* Unique experiential states are carried forward
+
+**6. Self-Reflection**
+
+* Internal philosophical monologue (`self_talk`)
+* Generated in the LLM’s own voice
+* Used as an additional learning signal
+
+---
+
+## v2 Architecture (Short)
+
+* **Quantum Body** — `qiskit`, entropy as sensory input
+* **LivingBrain** — LSTM + attention, action control
+* **LivingLLM** — Transformer decoder with latent field
+* **Memory** — tokens + weights + core memory
+* **Hormones** — behavioral modulation
+
+This is not an agent. It is a process.
+
+---
+
+## Usage
+
+```python
+from quantum_life_v8 import QuantumLife
+
+life = QuantumLife(device='cpu')
+
+for _ in range(100):
+    life.live_one_step()
+```
+
+The entity will:
+
+* live,
+* learn,
+* search for information,
+* talk to itself,
+* accumulate memory.
+
+---
+
 
 ## 🌟 What Makes This Different?
 
