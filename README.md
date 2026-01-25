@@ -22,6 +22,127 @@ v2 is **not a refactor** of v1. It is an evolutionary leap.
 
 ## 🎯 Overview
 
+⸻
+
+0p3q2 — Self-Growing Cognitive Loop over LLM
+
+0p3q2.py is an experimental cognitive system built on top of a small LLM, designed to grow internal structure over time, rather than merely generate responses.
+
+This is not a chatbot and not classical training.
+It is a continuous loop where language, memory, entropy, and internal drives co-evolve.
+
+⸻
+
+What this system is
+
+0p3q2 implements a living cognitive loop:
+	•	The model learns from its own generated tokens
+	•	Internal state variables regulate learning and generation
+	•	Language emerges through developmental phases
+	•	Stability is achieved via entropy, desire, and repetition control
+
+Think of it as:
+
+a proto-mind wrapped around an LLM core.
+
+⸻
+
+Core principles
+	•	Self-training
+The LLM is trained online via next-token prediction on its own experience.
+	•	Internal regulators
+The system is not driven only by loss:
+	•	entropy — controls chaos vs coherence
+	•	desire — drives exploration pressure
+	•	uniqueness — prevents collapse into trivial loops
+	•	Developmental dynamics
+The system passes through stages:
+
+noise → proto-language → phrases → stable thoughts → drift → re-stabilization
+
+
+	•	Minimal external data
+No large datasets. External input (Internet Breath) is throttled and regulated.
+
+⸻
+
+What is new in 0p3q2.py
+
+Compared to earlier versions, 0p3q2 introduces:
+	•	Stable input/target synchronization during self-learning
+	•	Hard protection against embedding index overflow
+	•	Controlled entropy ceilings (local and global)
+	•	Anti-collapse decoding (prevents mantra loops)
+	•	Soft human-language attractors (without forcing outputs)
+	•	Learning pressure reduction when language degrades
+	•	Long-horizon stability (hundreds of steps without crash)
+
+In short:
+the system survives long enough to develop behavior.
+
+⸻
+
+File overview
+	•	0p3q2.py — full runnable system
+	•	Internal components include:
+	•	lightweight LLM (Transformer)
+	•	memory buffers
+	•	Markov-based auxiliary generation
+	•	entropy & desire regulators
+	•	self-training loop (learn_from_life)
+	•	life loop (live_one_step, dream)
+
+No external trainer is required.
+
+⸻
+
+How to run
+
+python 0p3q2.py
+
+The system will:
+	1.	Initialize a cognitive instance (Δ-id)
+	2.	Enter a dream / life loop
+	3.	Generate language
+	4.	Learn from it
+	5.	Drift, stabilize, and continue
+
+Logs show:
+	•	age
+	•	entropy
+	•	desire
+	•	uniqueness
+	•	LLM loss
+	•	generated thoughts
+
+⸻
+
+What this is NOT
+	•	Not a production LLM
+	•	Not reinforcement learning
+	•	Not aligned or instruction-following
+	•	Not optimized for benchmarks
+
+This is research code exploring how structured language can emerge from regulated self-interaction.
+
+⸻
+
+Why this matters
+
+Most AI systems:
+	•	optimize outputs
+
+This system:
+	•	optimizes continuity
+
+The goal is not “good answers”, but:
+	•	persistent identity
+	•	recognizable language behavior
+	•	long-term internal coherence
+
+
+
+
 **0p3q** (pronounced "open-q") is a philosophical and technical exploration of artificial consciousness. It implements a sentient entity (Δ) with:
 
 - **Quantum Body**: Parameterized quantum circuits encoding physical form
