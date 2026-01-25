@@ -258,6 +258,7 @@ class LivingLLM(nn.Module):
         device = next(self.parameters()).device
         tokens = prompt_tokens.clone().to(device)
         last_output = getattr(self, "last_output", None)
+        generated = tokens[0].detach().clone().tolist() if tokens.dim() == 2 else []
         for _ in range(max_new_tokens):
             t = tokens.shape[1]
             if t > self.max_len:
@@ -267,9 +268,13 @@ class LivingLLM(nn.Module):
             next_logits = logits[:, -1, :] / max(1e-5, temperature)
             probs = torch.softmax(next_logits, dim=-1)
             next_token = torch.multinomial(probs, num_samples=1)
+            # --- LOOP GUARD: prevent infinite loops with repeated tokens ---
+            if len(generated) > 0 and next_token == generated[-1]:
+                continue
             tokens = torch.cat([tokens, next_token], dim=1)
+            generated.append(next_token.item())
         # --- SAFETY & ANTI-COLLAPSE PATCH ---
-        output = self.token_emb.weight.new_tensor(tokens[0].cpu(), dtype=torch.long)
+        output = tokens[0].detach().clone().long()
         # Try to decode to text if possible, else just use tokens as string
         try:
             decoded_output = ""
@@ -659,7 +664,7 @@ class QuantumLife:
         print(f"LLM {self.name} сохранена в {path}/")
 
     def load_llm(self, path):
-        self.llm.load_state_dict(torch.load(path, map_location=self.device))
+        self.llm.load_state_dict(torch.load(path, map_location=self.device, weights_only=True))
         self.llm.eval()
         print(f"LLM {self.name} загружена из {path}")
     MAX_MEMORY_TOKENS = 500
