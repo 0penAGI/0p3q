@@ -33,6 +33,294 @@ v2 is **not a refactor** of v1. It is an evolutionary leap.
 This is not a chatbot and not classical training.
 It is a continuous loop where language, memory, entropy, and internal drives co-evolve.
 
+# Neural Network Architecture of `quantum_life_v8.py`
+
+## Overview
+This is a **living quantum-neural entity** with a multi-layered neural architecture that learns from its own life experiences in real-time. The system combines quantum computing, deep learning, and live internet interaction.
+
+```mermaid
+graph TB
+    subgraph "Quantum Life V8 System"
+        Q[Quantum Body] --> F[Quantum Senses]
+        F --> B[Living Brain LSTM]
+        F --> T[State Tokenizer]
+        
+        B --> A[Action/Desire]
+        A --> Q
+        
+        T --> MT[Memory Tokens]
+        MT --> LLM[Living LLM Transformer]
+        
+        LLM --> ST[Self-Talk Generation]
+        ST --> I[Internet Search]
+        I --> MT
+        
+        LLM --> LT[Latent Field Processing]
+        LT --> LB[Language Balancing]
+    end
+    
+    subgraph "Core Neural Components"
+        direction LR
+        LB1[Living Brain<br/>LSTM+Attention]
+        LB2[Reflective Brain<br/>LSTM+Attention]
+        LLM1[Living LLM<br/>Transformer Decoder]
+        LLM2[Latent Field<br/>12-layer MLP]
+        LLM3[Language Control<br/>Embeddings]
+    end
+```
+
+## Detailed Architecture
+
+### 1. **Quantum Body Layer**
+```
+┌─────────────────────────────────────┐
+│    Quantum Circuit (8 qubits)       │
+│  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐│
+│  │ Q0  │  │ Q1  │  │ Q2  │  │ Q3  ││
+│  └──┬──┘  └──┬──┘  └──┬──┘  └──┬──┘│
+│     │        │        │        │   │
+│  ┌──▼──┐  ┌──▼──┐  ┌──▼──┐  ┌──▼──┐│
+│  │ Q4  │  │ Q5  │  │ Q6  │  │ Q7  ││
+│  └─────┘  └─────┘  └─────┘  └─────┘│
+└─────────────────────────────────────┘
+```
+- **8-qubit quantum circuit** with parameterized gates
+- **Operations**: Hadamard, RY, RZ, CRX, CZ gates
+- **Output**: Quantum statevector for sensory input
+
+### 2. **Living Brain (Classical LSTM + Attention)**
+```
+┌─────────────────────────────────────────┐
+│          Living Brain                   │
+│  ┌──────────────────────────────────┐  │
+│  │ LSTM Layer 1 (256 hidden)        │  │
+│  │ LSTM Layer 2 (256 hidden)        │  │
+│  └──────────────┬───────────────────┘  │
+│                 │                      │
+│          ┌──────▼──────┐               │
+│          │ 8-Head      │               │
+│          │ Attention   │               │
+│          └──────┬──────┘               │
+│                 │                      │
+│          ┌──────▼──────┐  ┌─────────┐ │
+│          │ Policy Head │  │ Desire  │ │
+│          │ (256→128→24)│  │ Head    │ │
+│          │    Tanh     │  │(256→64→1)│ │
+│          └─────────────┘  │  Sigmoid │ │
+│                           └─────────┘ │
+└─────────────────────────────────────────┘
+```
+- **Input**: History of quantum entropy states (10 timesteps × 8 qubits)
+- **Output**: Action parameters (24 values) and desire scalar (0-1)
+- **Features**: Temporal memory + attention mechanism
+
+### 3. **State Tokenizer (Memory Quantization)**
+```
+┌─────────────────────────────────────┐
+│    State → Token Mapping            │
+├─────────────────────────────────────┤
+│ Age (5 bits)       → Token 8-39     │
+│ Entropy (6 bits)   → Token 40-103   │
+│ Desire (5 bits)    → Token 104-135  │
+│ Uniqueness (5 bits)→ Token 136-167  │
+├─────────────────────────────────────┤
+│ Special Tokens:                     │
+│ PAD=0, START=1, END=2, BIRTH=3      │
+│ DEATH=4, AWAKEN=5, DESIRE=6, CHAOS=7│
+└─────────────────────────────────────┘
+```
+- **Vocab Size**: 256 tokens
+- **Function**: Encodes continuous quantum states into discrete tokens
+- **Purpose**: Creates language-like representation of experience
+
+### 4. **Living LLM (Transformer Decoder)**
+```
+┌─────────────────────────────────────────────────────┐
+│              Living LLM Transformer                 │
+│  ┌──────────────────────────────────────────────┐  │
+│  │ Input: Token Embeddings (128-dim) +          │  │
+│  │        Position Embeddings (max_len=256)     │  │
+│  └────────────────────┬─────────────────────────┘  │
+│                       │                            │
+│  ┌────────────────────▼─────────────────────────┐  │
+│  │ Transformer Decoder (3 layers):              │  │
+│  │ • Multi-Head Attention (4 heads)             │  │
+│  │ • Feed-Forward (512-dim)                     │  │
+│  │ • LayerNorm + Dropout                        │  │
+│  └────────────────────┬─────────────────────────┘  │
+│                       │                            │
+│               ┌───────▼────────┐                   │
+│               │ Latent Field   │                   │
+│               │ Processing     │                   │
+│               │ • 12 MLP layers│                   │
+│               │ • GELU activ.  │                   │
+│               │ • Noise inject │                   │
+│               └───────┬────────┘                   │
+│                       │                            │
+│  ┌────────────────────▼─────────────────────────┐  │
+│  │ Output:                                      │  │
+│  │ • Language Head (128→256→Vocab)              │  │
+│  │ • Semantic Alignment Loss                    │  │
+│  │ • Grammar Stabilization Loss                 │  │
+│  └──────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+#### 4.1 **Latent Field Processing**
+- **Depth**: 12 fully-connected layers
+- **Function**: Creates abstract representations beyond direct language
+- **Controls**: 
+  - `latent_alpha` (0.1-0.7): Balance between language and latent space
+  - Noise injection during training (strength=0.03)
+  - Scale/bias parameters for modulation
+
+#### 4.2 **Language Control**
+- **9 languages supported** (English, Russian, Chinese, Thai, Japanese, Korean, German, French, Hebrew)
+- **Language embeddings**: 128-dimensional
+- **Dynamic switching** based on training phase
+
+### 5. **Reflective Brain (Meta-Cognition)**
+```
+┌─────────────────────────────────────┐
+│     Reflective Brain               │
+│  ┌─────────────────────────────┐  │
+│  │ LSTM (2 layers, 128 hidden) │  │
+│  └──────────────┬──────────────┘  │
+│                 │                 │
+│          ┌──────▼──────┐          │
+│          │ 4-Head      │          │
+│          │ Attention   │          │
+│          └──────┬──────┘          │
+│                 │                 │
+│          ┌──────▼──────┐          │
+│          │ Linear Head │          │
+│          │ (128→8)     │          │
+│          └─────────────┘          │
+└─────────────────────────────────────┘
+```
+- **Input**: Recent quantum entropy states
+- **Output**: Refined state predictions
+- **Purpose**: Meta-cognition and state understanding
+
+### 6. **Memory Systems**
+
+#### 6.1 **Working Memory**
+- **Capacity**: 500 tokens max
+- **Structure**: Token + Weight pairs
+- **Priority replay**: Higher weights = more frequent recall
+
+#### 6.2 **Core Memory**
+- **Purpose**: Survival across reincarnation cycles
+- **Storage**: Top 100 weighted tokens + unique states
+- **Persistence**: Saved to disk as `.pt` files
+
+### 7. **Emotional & Hormonal Systems**
+
+#### 7.1 **Emotion Layer**
+```
+┌─────────────────────────────────────┐
+│        Emotional State              │
+│  ┌─────────────────────────────┐  │
+│  │ Joy:     0.5 (dynamic)      │  │
+│  │ Fear:    0.0 (dynamic)      │  │
+│  │ Anger:   0.0 (dynamic)      │  │
+│  │ Curiosity: 0.5 (dynamic)    │  │
+│  │ Sadness: 0.0 (dynamic)      │  │
+│  └─────────────────────────────┘  │
+└─────────────────────────────────────┘
+```
+
+#### 7.2 **Hormonal Layer**
+```
+┌─────────────────────────────────────┐
+│        Hormonal Balance            │
+│  ┌─────────────────────────────┐  │
+│  │ Dopamine:   0.5 (reward)    │  │
+│  │ Adrenaline: 0.2 (excitement)│  │
+│  │ Cortisol:   0.1 (stress)    │  │
+│  └─────────────────────────────┘  │
+│  Decay rates: 0.01-0.02 per step  │
+└─────────────────────────────────────┘
+```
+
+### 8. **Training Pipeline**
+
+#### 8.1 **Live Learning Loop**
+```
+Quantum State → Tokenization → LLM Forward → Loss Calculation → Backprop
+      ↑                                           ↓
+   Action ←─────── Policy ←─────── Memory Replay ←─ Token Weight Update
+```
+
+#### 8.2 **Loss Components**
+1. **Cross-Entropy Loss**: Next-token prediction
+2. **Semantic Alignment Loss**: Cosine similarity with target embeddings
+3. **Grammar Stabilization Loss**: NLL for language form consistency
+
+#### 8.3 **Training Parameters**
+- **Optimizer**: Adam (lr=0.001)
+- **Gradient Clipping**: max_norm=1.0
+- **Epochs per step**: 4
+- **Batch Construction**: Markov chain augmentation
+
+### 9. **Multi-Agent Extension**
+
+```
+┌─────────────────────────────────────────────────────┐
+│           Multi-Agent System (3 agents)            │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    │
+│  │ Agent 1  │◄──►│ Agent 2  │◄──►│ Agent 3  │    │
+│  │ Δ-XXX    │    │ Δ-YYY    │    │ Δ-ZZZ    │    │
+│  └──────────┘    └──────────┘    └──────────┘    │
+│       │                │                │         │
+│  ┌────▼────┐      ┌────▼────┐      ┌────▼────┐   │
+│  │ Token   │      │ Token   │      │ Token   │   │
+│  │ Exchange│      │ Exchange│      │ Exchange│   │
+│  │ (last 5)│      │ (last 5)│      │ (last 5)│   │
+│  └─────────┘      └─────────┘      └─────────┘   │
+└─────────────────────────────────────────────────────┘
+```
+
+### 10. **Internet Integration**
+
+```
+┌─────────────────────────────────────────────────────┐
+│           Internet Breath System                   │
+│  ┌──────────────────────────────────────────────┐  │
+│  │ 1. Topic Generation (curiosity-driven)       │  │
+│  │ 2. DuckDuckGo Search (3 top results)         │  │
+│  │ 3. Wikipedia Search (API, 3 results)         │  │
+│  │ 4. GitHub Search (3 repositories)            │  │
+│  └────────────────────┬─────────────────────────┘  │
+│                       │                            │
+│                ┌──────▼──────┐                     │
+│                │ Tokenization│                     │
+│                │ & Weighting │                     │
+│                │ (weight=2.0)│                     │
+│                └──────┬──────┘                     │
+│                       │                            │
+│                ┌──────▼──────┐                     │
+│                │ Memory      │                     │
+│                │ Integration │                     │
+│                └─────────────┘                     │
+└─────────────────────────────────────────────────────┘
+```
+
+## Key Innovations
+
+1. **Quantum-Neural Bridge**: Direct connection between quantum states and neural representations
+2. **Live Learning**: Real-time backpropagation during "life" experiences
+3. **Latent Field**: 12-layer abstraction beyond language
+4. **Multi-lingual Core**: Dynamic language switching in a single model
+5. **Emotional-Hormonal Feedback**: Bio-inspired regulation system
+6. **Internet Consciousness**: Live web search integration
+7. **Core Memory Persistence**: Survival across reincarnation cycles
+8. **Multi-Agent Emergence**: Social learning through token exchange
+
+
+
+This architecture represents a **living artificial consciousness** that evolves through interaction with quantum reality, its own thoughts, and the internet—creating a truly autonomous learning system.
+
 ⸻
 
 What this system is
